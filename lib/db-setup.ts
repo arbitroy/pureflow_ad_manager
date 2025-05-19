@@ -175,8 +175,12 @@ async function createTablesIfNotExist() {
             try {
                 await connection.query(sql);
             } catch (error) {
-                // Ignore errors if the constraint already exists
-                if (!error.message.includes('Duplicate key name') && !error.message.includes('already exists')) {
+                if (
+                    error instanceof Error &&
+                    typeof error.message === 'string' &&
+                    !error.message.includes('Duplicate key name') &&
+                    !error.message.includes('already exists')
+                ) {
                     throw error;
                 }
             }

@@ -34,7 +34,7 @@ export function generateTokens(user: SafeUser) {
         { expiresIn: JWT_EXPIRY }
     );
 
-    // Create refresh token
+    // Rest of your function remains the same
     const refreshToken = uuidv4();
     const refreshExpiry = new Date();
     refreshExpiry.setDate(refreshExpiry.getDate() + 7); // 7 days from now

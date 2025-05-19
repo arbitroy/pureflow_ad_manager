@@ -1,4 +1,4 @@
-import { initializeDatabase } from '../lib/db-setup';
+const { initializeDatabase } = require('../lib/db-setup');
 
 async function runInit() {
     try {
