@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,24 +8,30 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+    const [rememberMe, setRememberMe] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     const router = useRouter();
-    const { login } = useAuth();
+    const { login, error, clearError, isAuthenticated } = useAuth();
+
+    // Redirect if already authenticated
+    useEffect(() => {
+        if (isAuthenticated) {
+            router.push('/');
+        }
+    }, [isAuthenticated, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
+        clearError();
         setIsLoading(true);
 
         try {
-            await login(email, password);
-            console.log('Login successful');
+            await login(email, password, { rememberMe });
             router.push('/');
-            console.log('Redirecting to dashboard...');
         } catch (err) {
-            setError('Invalid email or password');
+            // The error is already handled in the AuthContext
+            console.error('Login failed');
         } finally {
             setIsLoading(false);
         }
@@ -72,6 +78,7 @@ export default function Login() {
                                     className="w-full bg-pure-dark text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-pure-primary"
                                     placeholder="your@email.com"
                                     required
+                                    disabled={isLoading}
                                 />
                             </div>
 
@@ -80,7 +87,11 @@ export default function Login() {
                                     <label htmlFor="password" className="block text-sm font-medium text-gray-400">
                                         Password
                                     </label>
-                                    <button type="button" className="text-sm text-pure-primary hover:text-pure-secondary">
+                                    <button 
+                                        type="button" 
+                                        className="text-sm text-pure-primary hover:text-pure-secondary"
+                                        onClick={() => alert('Password reset functionality would be implemented here')}
+                                    >
                                         Forgot Password?
                                     </button>
                                 </div>
@@ -92,6 +103,7 @@ export default function Login() {
                                     className="w-full bg-pure-dark text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-pure-primary"
                                     placeholder="••••••••"
                                     required
+                                    disabled={isLoading}
                                 />
                             </div>
 
@@ -99,7 +111,10 @@ export default function Login() {
                                 <input
                                     id="remember"
                                     type="checkbox"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
                                     className="h-4 w-4 text-pure-primary focus:ring-pure-primary border-gray-600 rounded bg-pure-dark"
+                                    disabled={isLoading}
                                 />
                                 <label htmlFor="remember" className="ml-2 block text-sm text-gray-400">
                                     Remember me

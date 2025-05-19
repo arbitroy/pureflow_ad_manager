@@ -23,7 +23,7 @@ export async function comparePasswords(password: string, hashedPassword: string)
     return bcrypt.compare(password, hashedPassword);
 }
 
-export function generateTokens(user: SafeUser) {
+export function generateTokens(user: SafeUser, accessTokenExpiry = '1h') {
     // Create access token (JWT)
     const accessToken = jwt.sign(
         {
@@ -32,13 +32,13 @@ export function generateTokens(user: SafeUser) {
             role: user.role
         },
         Buffer.from(JWT_SECRET), // Convert to Buffer
-        { expiresIn: JWT_EXPIRY } as SignOptions
+        { expiresIn: accessTokenExpiry } as SignOptions
     );
 
     // Create refresh token
     const refreshToken = uuidv4();
     const refreshExpiry = new Date();
-    refreshExpiry.setDate(refreshExpiry.getDate() + 7); // 7 days from now
+    refreshExpiry.setDate(refreshExpiry.getDate() + 7); // Default to 7 days
 
     return {
         accessToken,

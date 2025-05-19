@@ -157,7 +157,27 @@ async function createTablesIfNotExist() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         revoked BOOLEAN DEFAULT FALSE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )`
+      )`,
+            // User logins table for tracking login history
+            `CREATE TABLE IF NOT EXISTS user_logins (
+  id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  user_id VARCHAR(36) NOT NULL,
+  login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+)`,
+
+            // User activity table for tracking various user actions
+            `CREATE TABLE IF NOT EXISTS user_activity (
+  id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  user_id VARCHAR(36) NOT NULL,
+  activity_type ENUM('PASSWORD_CHANGE', 'PROFILE_UPDATE', 'CAMPAIGN_CREATE', 'CAMPAIGN_UPDATE', 'LOGIN', 'LOGOUT') NOT NULL,
+  details TEXT,
+  ip_address VARCHAR(45),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+)`
         ];
 
         // Execute all SQL statements

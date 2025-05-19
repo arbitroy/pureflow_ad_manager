@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyAccessToken, getUserById } from '@/lib/auth';
 import { cookies } from 'next/headers';
+import pool from '@/lib/db';
 
 export async function GET(request: Request) {
     try {
@@ -35,6 +36,15 @@ export async function GET(request: Request) {
             );
         }
 
+        // Get last login time
+        const [lastLoginRows] = await pool.query(
+            'SELECT login_time FROM user_logins WHERE user_id = ? ORDER BY login_time DESC LIMIT 1',
+            [user.id]
+        );
+
+        const lastLoginData = (lastLoginRows as any[])[0] || null;
+        const lastLogin = lastLoginData ? lastLoginData.login_time : null;
+
         return NextResponse.json({
             success: true,
             user: {
@@ -42,7 +52,8 @@ export async function GET(request: Request) {
                 name: user.name,
                 email: user.email,
                 role: user.role
-            }
+            },
+            lastLogin
         });
     } catch (error) {
         console.error('Authentication error:', error);

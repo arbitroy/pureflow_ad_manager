@@ -1,12 +1,14 @@
+
 'use client'
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 const Navbar = () => {
     const pathname = usePathname();
-    const { logout } = useAuth();
+    const router = useRouter();
+    const { user, logout, isAuthenticated } = useAuth();
 
     const navItems = [
         { name: 'Dashboard', path: '/' },
@@ -14,6 +16,14 @@ const Navbar = () => {
         { name: 'Geo-Fencing', path: '/geo-fencing' },
         { name: 'Analytics', path: '/analytics' },
     ];
+
+    // Get first letter of user's name for avatar
+    const avatarText = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
+
+    const handleLogout = async () => {
+        await logout();
+        // Redirect is handled in the logout function
+    };
 
     return (
         <nav className="bg-pure-light-dark py-4">
@@ -53,34 +63,40 @@ const Navbar = () => {
                         })}
                     </div>
 
-                    <div className="flex items-center space-x-4">
-                        <button className="text-white hover:text-pure-secondary">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                            </svg>
-                        </button>
-                        <div className="relative group">
-                            <button className="h-8 w-8 rounded-full bg-pure-secondary flex items-center justify-center">
-                                <span className="text-white font-bold">U</span>
+                    {isAuthenticated && (
+                        <div className="flex items-center space-x-4">
+                            <button className="text-white hover:text-pure-secondary">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
                             </button>
-                            <div className="absolute right-0 mt-2 w-48 bg-pure-light-dark rounded-md shadow-lg overflow-hidden z-20 opacity-0 scale-95 translate-y-2 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-200 ease-in-out origin-top-right">
-                                <div className="py-2">
-                                    <div className="px-4 py-3 border-b border-pure-dark">
-                                        <p className="text-sm text-white">Signed in as</p>
-                                        <p className="text-sm font-medium text-pure-primary truncate">user@pureflow.com</p>
+                            <div className="relative group">
+                                <button className="h-8 w-8 rounded-full bg-pure-secondary flex items-center justify-center" aria-label="User menu">
+                                    <span className="text-white font-bold">{avatarText}</span>
+                                </button>
+                                <div className="absolute right-0 mt-2 w-48 bg-pure-light-dark rounded-md shadow-lg overflow-hidden z-20 opacity-0 scale-95 translate-y-2 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-200 ease-in-out origin-top-right">
+                                    <div className="py-2">
+                                        <div className="px-4 py-3 border-b border-pure-dark">
+                                            <p className="text-sm text-white">Signed in as</p>
+                                            <p className="text-sm font-medium text-pure-primary truncate">{user?.email}</p>
+                                        </div>
+                                        <Link href="/profile" className="block px-4 py-2 text-sm text-white hover:bg-pure-dark">
+                                            Your Profile
+                                        </Link>
+                                        <Link href="/settings" className="block px-4 py-2 text-sm text-white hover:bg-pure-dark">
+                                            Settings
+                                        </Link>
+                                        <button
+                                            onClick={handleLogout}
+                                            className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-pure-dark"
+                                        >
+                                            Sign out
+                                        </button>
                                     </div>
-                                    <a href="#" className="block px-4 py-2 text-sm text-white hover:bg-pure-dark">Your Profile</a>
-                                    <a href="#" className="block px-4 py-2 text-sm text-white hover:bg-pure-dark">Settings</a>
-                                    <button
-                                        onClick={() => logout()}
-                                        className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-pure-dark"
-                                    >
-                                        Sign out
-                                    </button>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </nav>
