@@ -1,15 +1,17 @@
 @import "tailwindcss";
 
-:root {
-  --pure-primary: #3e91ff;
-  --pure-secondary: #ff762e;
-  --pure-dark: #121025;
-  --pure-light-dark: #1a192c;
+/* Define theme variables for your custom colors */
+@theme {
+  /* Colors */
+  --color-pure-primary: #3e91ff;
+  --color-pure-secondary: #ff762e;
+  --color-pure-dark: #121025;
+  --color-pure-light-dark: #1a192c;
 }
 
 body {
   color: white;
-  background: var(--pure-dark);
+  background: var(--color-pure-dark);
 }
 
 @layer components {
@@ -18,11 +20,17 @@ body {
   }
   
   .btn-primary {
-    @apply bg-pure-primary text-white px-4 py-2 rounded-md hover:bg-opacity-80 transition-all;
+    @apply bg-pure-primary text-white px-4 py-2 rounded-md transition-all;
+    &:hover {
+      @apply bg-pure-primary/80;
+    }
   }
   
   .btn-secondary {
-    @apply bg-pure-secondary text-white px-4 py-2 rounded-md hover:bg-opacity-80 transition-all;
+    @apply bg-pure-secondary text-white px-4 py-2 rounded-md transition-all;
+    &:hover {
+      @apply bg-pure-secondary/80;
+    }
   }
   
   .card {
