@@ -63,22 +63,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const login = async (email: string, password: string) => {
         setLoading(true);
         try {
-            // In a real app, this would call your API to authenticate
-            // For demo purposes, we'll simulate a successful login
-            const mockUser: User = {
-                id: '1',
-                email: email,
-                name: 'Demo User',
-                role: UserRole.MARKETING,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            };
+            // Call the actual API endpoint
+            const response = await fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
 
-            // Simulate JWT token
-            const mockToken = 'mock_jwt_token';
-            localStorage.setItem('auth_token', mockToken);
+            const data = await response.json();
 
-            setUser(mockUser);
+            if (!data.success) {
+                throw new Error(data.message || 'Login failed');
+            }
+
+            setUser(data.user);
+            return data;
         } catch (error) {
             console.error('Login error:', error);
             throw error;

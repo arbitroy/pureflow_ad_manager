@@ -51,7 +51,7 @@ export default function GeoFencing() {
                                                 strokeLinejoin="round"
                                                 strokeWidth={2}
                                                 d="M9 12a3 3 0 100-6 3 3 0 000 6z"
-                                            />
+                                            />'use client';
                                             <path
                                                 strokeLinecap="round"
                                                 strokeLinejoin="round"
