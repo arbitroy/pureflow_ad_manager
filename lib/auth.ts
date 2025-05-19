@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from './db';
 import { User, UserRole } from '@/types/models';
+import { SignOptions } from 'jsonwebtoken';
 
 // Environment variables
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -30,11 +31,11 @@ export function generateTokens(user: SafeUser) {
             email: user.email,
             role: user.role
         },
-        JWT_SECRET,
-        { expiresIn: JWT_EXPIRY }
+        Buffer.from(JWT_SECRET), // Convert to Buffer
+        { expiresIn: JWT_EXPIRY } as SignOptions
     );
 
-    // Rest of your function remains the same
+    // Create refresh token
     const refreshToken = uuidv4();
     const refreshExpiry = new Date();
     refreshExpiry.setDate(refreshExpiry.getDate() + 7); // 7 days from now

@@ -1,12 +1,12 @@
 import mysql from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
 import { hashPassword } from './auth';
-import { UserRole, PlatformName, CampaignStatus } from '@/types/models';
+import { UserRole, PlatformName, CampaignStatus } from '../types/models';
 
 // Database connection parameters
 const DB_HOST = process.env.DB_HOST || 'localhost';
-const DB_USER = process.env.DB_USER || 'root';
-const DB_PASSWORD = process.env.DB_PASSWORD || '';
+const DB_USER = process.env.DB_USER || 'pureflow';
+const DB_PASSWORD = process.env.DB_PASSWORD || '12345';
 const DB_NAME = process.env.DB_NAME || 'pureflow_db';
 
 // Create root connection (without database)

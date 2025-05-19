@@ -11,8 +11,8 @@ export async function getPool(): Promise<mysql.Pool> {
 
         pool = mysql.createPool({
             host: process.env.DB_HOST || 'localhost',
-            user: process.env.DB_USER || 'root',
-            password: process.env.DB_PASSWORD || '',
+            user: process.env.DB_USER || 'pureflow',
+            password: process.env.DB_PASSWORD || '12345',
             database: process.env.DB_NAME || 'pureflow_db',
             waitForConnections: true,
             connectionLimit: 10,
@@ -25,13 +25,13 @@ export async function getPool(): Promise<mysql.Pool> {
 
 // For backward compatibility
 export default {
-    query: async (...args: any[]) => {
+    query: async <T extends any[]>(sql: string, values?: any): Promise<any> => {
         const poolInstance = await getPool();
-        return poolInstance.query(...args);
+        return poolInstance.query(sql, values);
     },
-    execute: async (...args: any[]) => {
+    execute: async <T extends any[]>(sql: string, values?: any): Promise<any> => {
         const poolInstance = await getPool();
-        return poolInstance.execute(...args);
+        return poolInstance.execute(sql, values);
     },
     end: async () => {
         if (pool) {
