@@ -175,18 +175,22 @@ async function createTablesIfNotExist() {
             try {
                 await connection.query(sql);
             } catch (error) {
+                // More comprehensive error handling
                 if (
                     error instanceof Error &&
                     typeof error.message === 'string' &&
-                    !error.message.includes('Duplicate key name') &&
-                    !error.message.includes('already exists')
+                    (error.message.includes('Duplicate key name') ||
+                        error.message.includes('already exists') ||
+                        (error as any).code === 'ER_FK_DUP_NAME')
                 ) {
+                    console.log(`Foreign key constraint already exists, skipping: ${sql}`);
+                } else {
                     throw error;
                 }
             }
         }
 
-        console.log('Tables created or already exist');
+        console.log('Tables and constraints created or updated successfully');
     } catch (error) {
         console.error('Error creating tables:', error);
         throw error;
