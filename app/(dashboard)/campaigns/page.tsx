@@ -1,43 +1,115 @@
-
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import PageContainer from '@/components/PageContainer';
+import StatusMenu from '@/components/campaign/StatusMenu';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { Campaign, CampaignStatus } from '@/types/models';
 
 export default function Campaigns() {
-    const [campaigns, setCampaigns] = useState([
-        {
-            id: 1,
-            name: 'Summer Collection Launch',
-            platforms: ['Facebook', 'Instagram'],
-            status: 'Active',
-            budget: '$1,200',
-            reach: '45K',
-            conversions: '320',
-            dateRange: 'May 15 - Jun 15, 2025',
-        },
-        {
-            id: 2,
-            name: 'Flash Sale Promotion',
-            platforms: ['Instagram'],
-            status: 'Scheduled',
-            budget: '$800',
-            reach: '0',
-            conversions: '0',
-            dateRange: 'Jun 1 - Jun 5, 2025',
-        },
-        {
-            id: 3,
-            name: 'New Product Announcement',
-            platforms: ['Facebook', 'Instagram'],
-            status: 'Draft',
-            budget: '$500',
-            reach: '0',
-            conversions: '0',
-            dateRange: 'Not scheduled',
-        },
-    ]);
+    const router = useRouter();
+    const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // Fetch campaigns
+    useEffect(() => {
+        const fetchCampaigns = async () => {
+            try {
+                const response = await fetch('/api/campaigns');
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch campaigns');
+                }
+
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    setCampaigns(result.data);
+                } else {
+                    throw new Error(result.message || 'Failed to fetch campaigns');
+                }
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'An unknown error occurred');
+                console.error('Error fetching campaigns:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCampaigns();
+    }, []);
+
+    // Handle status change
+    const handleStatusChange = async (campaignId: string | number, newStatus: CampaignStatus) => {
+        try {
+            const response = await fetch(`/api/campaigns/${campaignId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: newStatus }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update campaign status');
+            }
+
+            // Update local state
+            setCampaigns(prevCampaigns =>
+                prevCampaigns.map(campaign =>
+                    campaign.id === campaignId
+                        ? { ...campaign, status: newStatus }
+                        : campaign
+                )
+            );
+        } catch (error) {
+            console.error('Error updating campaign status:', error);
+        }
+    };
+
+    // Filter campaigns by search term
+    const filteredCampaigns = campaigns.filter(campaign =>
+        campaign.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // Get platform display names
+    const getPlatformNames = (campaign: Campaign) => {
+        return campaign.platforms.map(platform =>
+            platform.name === 'FACEBOOK' ? 'Facebook' : 'Instagram'
+        );
+    };
+
+    // Format date range
+    const getDateRange = (campaign: Campaign) => {
+        if (!campaign.startDate && !campaign.endDate) {
+            return 'Not scheduled';
+        }
+
+        const formatDate = (date: Date | string | undefined) => {
+            if (!date) return '';
+            return new Date(date).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        };
+
+        return `${formatDate(campaign.startDate)} - ${formatDate(campaign.endDate)}`;
+    };
+
+    // Format budget
+    const formatBudget = (budget: number) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(budget);
+    };
 
     return (
         <PageContainer title="Campaign Management">
@@ -47,6 +119,8 @@ export default function Campaigns() {
                         <input
                             type="text"
                             placeholder="Search campaigns..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                             className="bg-pure-dark text-white pl-10 pr-4 py-2 rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-pure-primary"
                         />
                         <svg
@@ -65,7 +139,7 @@ export default function Campaigns() {
                         </svg>
                     </div>
                 </div>
-                <button className="btn-primary flex items-center">
+                <Link href="/campaigns/new" className="btn-primary flex items-center">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-5 w-5 mr-2"
@@ -81,89 +155,124 @@ export default function Campaigns() {
                         />
                     </svg>
                     New Campaign
-                </button>
+                </Link>
             </div>
 
-            <div className="bg-pure-light-dark rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="min-w-full">
-                        <thead>
-                            <tr className="bg-pure-dark">
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                    Campaign Name
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                    Platforms
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                    Status
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                    Budget
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                    Reach
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                    Conversions
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                    Date Range
-                                </th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-pure-dark">
-                            {campaigns.map((campaign, index) => (
-                                <motion.tr
-                                    key={campaign.id}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                                >
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm font-medium text-white">{campaign.name}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex space-x-1">
-                                            {campaign.platforms.map((platform) => (
-                                                <span
-                                                    key={platform}
-                                                    className={`px-2 py-1 text-xs rounded-full ${platform === 'Facebook' ? 'bg-blue-900 text-blue-200' : 'bg-pink-900 text-pink-200'
-                                                        }`}
-                                                >
-                                                    {platform}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span
-                                            className={`px-2 py-1 text-xs rounded-full ${campaign.status === 'Active'
-                                                    ? 'bg-green-900 text-green-200'
-                                                    : campaign.status === 'Scheduled'
-                                                        ? 'bg-yellow-900 text-yellow-200'
-                                                        : 'bg-gray-700 text-gray-300'
-                                                }`}
-                                        >
-                                            {campaign.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{campaign.budget}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{campaign.reach}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{campaign.conversions}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{campaign.dateRange}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button className="text-pure-primary hover:text-pure-secondary">Edit</button>
-                                    </td>
-                                </motion.tr>
-                            ))}
-                        </tbody>
-                    </table>
+            {loading ? (
+                <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pure-primary"></div>
                 </div>
-            </div>
+            ) : error ? (
+                <div className="p-6 bg-red-900 bg-opacity-50 text-red-200 rounded-lg">
+                    {error}
+                </div>
+            ) : (
+                <div className="bg-pure-light-dark rounded-lg overflow-hidden">
+                    {filteredCampaigns.length === 0 ? (
+                        <div className="p-8 text-center text-gray-400">
+                            {searchTerm ? 'No campaigns match your search' : 'No campaigns found. Create your first campaign!'}
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full">
+                                <thead>
+                                    <tr className="bg-pure-dark">
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            Campaign Name
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            Platforms
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            Status
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            Budget
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            Reach
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            Conversions
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            Date Range
+                                        </th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-pure-dark">
+                                    {filteredCampaigns.map((campaign, index) => (
+                                        <motion.tr
+                                            key={campaign.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ duration: 0.3, delay: index * 0.1 }}
+                                        >
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm font-medium text-white">{campaign.name}</div>
+                                                {campaign.description && (
+                                                    <div className="text-xs text-gray-400 truncate max-w-xs">
+                                                        {campaign.description}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex space-x-1">
+                                                    {getPlatformNames(campaign).map((platform) => (
+                                                        <span
+                                                            key={platform}
+                                                            className={`px-2 py-1 text-xs rounded-full ${platform === 'Facebook' ? 'bg-blue-900 text-blue-200' : 'bg-pink-900 text-pink-200'
+                                                                }`}
+                                                        >
+                                                            {platform}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <StatusMenu
+                                                    campaignId={campaign.id}
+                                                    currentStatus={campaign.status}
+                                                    onStatusChange={handleStatusChange}
+                                                />
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                                                {formatBudget(campaign.budget)}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                                                {campaign.analytics?.impressions || '0'}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                                                {campaign.analytics?.conversions || '0'}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                                                {getDateRange(campaign)}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <Link
+                                                    href={`/campaigns/${campaign.id}/edit`}
+                                                    className="text-pure-primary hover:text-pure-secondary mr-3"
+                                                >
+                                                    Edit
+                                                </Link>
+                                                <button
+                                                    onClick={() => {/* Delete functionality would go here */ }}
+                                                    className="text-red-400 hover:text-red-300"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </td>
+                                        </motion.tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
         </PageContainer>
     );
 }
