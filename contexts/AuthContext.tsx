@@ -1,4 +1,5 @@
 'use client';
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, UserRole } from '@/types/models';
 
@@ -6,7 +7,7 @@ interface AuthContextType {
     user: User | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<void>;
-    logout: () => void;
+    logout: () => Promise<void>;
     isAuthenticated: boolean;
 }
 
@@ -14,7 +15,7 @@ const AuthContext = createContext<AuthContextType>({
     user: null,
     loading: true,
     login: async () => { },
-    logout: () => { },
+    logout: async () => { },
     isAuthenticated: false,
 });
 
@@ -32,26 +33,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // Check if user is logged in on component mount
         const checkAuth = async () => {
             try {
-                // In a real app, this would verify the JWT token and fetch user data
-                const token = localStorage.getItem('auth_token');
+                const response = await fetch('/api/auth/me');
 
-                if (token) {
-                    // For demo purposes, we'll create a mock user
-                    // In a real app, you would validate the token with your backend
-                    const mockUser: User = {
-                        id: '1',
-                        email: 'user@pureflow.com',
-                        name: 'Demo User',
-                        role: UserRole.MARKETING,
-                        createdAt: new Date(),
-                        updatedAt: new Date(),
-                    };
-
-                    setUser(mockUser);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        setUser(data.user as User);
+                    }
                 }
             } catch (error) {
                 console.error('Authentication error:', error);
-                localStorage.removeItem('auth_token');
             } finally {
                 setLoading(false);
             }
@@ -63,21 +54,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const login = async (email: string, password: string) => {
         setLoading(true);
         try {
-            // Call the actual API endpoint
-            const response = await fetch('/api/auth', {
+            const response = await fetch('/api/auth/login', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                },
                 body: JSON.stringify({ email, password }),
             });
 
-            const data = await response.json();
-
-            if (!data.success) {
-                throw new Error(data.message || 'Login failed');
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Login failed');
             }
 
-            setUser(data.user);
-            return data;
+            const data = await response.json();
+            setUser(data.user as User);
         } catch (error) {
             console.error('Login error:', error);
             throw error;
@@ -86,9 +77,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
     };
 
-    const logout = () => {
-        localStorage.removeItem('auth_token');
-        setUser(null);
+    const logout = async () => {
+        try {
+            await fetch('/api/auth/logout', {
+                method: 'POST',
+            });
+            setUser(null);
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
     };
 
     return (

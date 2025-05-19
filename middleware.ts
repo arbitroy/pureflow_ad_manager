@@ -1,24 +1,39 @@
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { verifyAccessToken } from './lib/auth';
 
 // Define routes for App Router structure
 const protectedRoutes = [
-    // Dashboard routes in the (dashboard) route group
+    // Dashboard routes
     '/',
     '/campaigns',
     '/geo-fencing',
     '/analytics',
 ];
 
+// Admin-only routes
+const adminRoutes = [
+    '/admin',
+    '/admin/users',
+];
+
 // Define public routes
-const publicRoutes = ['/login'];
+const publicRoutes = ['/login', '/register'];
 
 export function middleware(request: NextRequest) {
-    const token = request.cookies.get('auth_token')?.value;
     const { pathname } = request.nextUrl;
+
+    // Get the token from cookies
+    const token = request.cookies.get('auth_token')?.value;
 
     // Check if the route is protected
     const isProtectedRoute = protectedRoutes.some(route =>
+        pathname === route || pathname.startsWith(`${route}/`)
+    );
+
+    // Check if the route is admin-only
+    const isAdminRoute = adminRoutes.some(route =>
         pathname === route || pathname.startsWith(`${route}/`)
     );
 
@@ -27,14 +42,24 @@ export function middleware(request: NextRequest) {
         pathname === route || pathname.startsWith(`${route}/`)
     );
 
-    // Redirect to login if trying to access a protected route without auth
+    // If no token and trying to access protected route, redirect to login
     if (isProtectedRoute && !token) {
         const url = new URL('/login', request.url);
         url.searchParams.set('redirect', pathname);
         return NextResponse.redirect(url);
     }
 
-    // Redirect to dashboard if trying to access login while already authenticated
+    // If trying to access admin route, verify role
+    if (isAdminRoute && token) {
+        const userData = verifyAccessToken(token);
+
+        // If token is invalid or user is not an admin, redirect to dashboard
+        if (!userData || userData.role !== 'ADMIN') {
+            return NextResponse.redirect(new URL('/', request.url));
+        }
+    }
+
+    // If has token and trying to access public route, redirect to dashboard
     if (isPublicRoute && token) {
         return NextResponse.redirect(new URL('/', request.url));
     }
@@ -50,8 +75,8 @@ export const config = {
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
          * - images (public files)
-         * - api routes
+         * - api routes (except auth-related ones that need middleware)
          */
-        '/((?!_next/static|_next/image|favicon.ico|images|api).*)',
+        '/((?!_next/static|_next/image|favicon.ico|images|api/(?!auth)).*)',
     ],
-};
+}

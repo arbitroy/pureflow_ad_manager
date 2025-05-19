@@ -1,5 +1,6 @@
 // User types
 export interface User {
+    password(password: any, password1: any): unknown;
     id: string;
     email: string;
     name: string;
