@@ -1,26 +1,14 @@
 import { initializeDatabase } from './db-setup';
 import { migrateMetaTablesAndFields } from './db-migration-meta';
 
-let dbInitialized = false;
+let initializationPromise: Promise<boolean> | null = null;
 
 export async function ensureDatabaseInitialized() {
-    if (dbInitialized) {
-        return true;
+    if (!initializationPromise) {
+        initializationPromise = initializeDatabase().catch(err => {
+            initializationPromise = null; // Reset on error
+            throw err;
+        });
     }
-
-    try {
-        // Initialize base database
-        const success = await initializeDatabase();
-        
-        // Run Meta API migration
-        if (success) {
-            await migrateMetaTablesAndFields();
-        }
-        
-        dbInitialized = success;
-        return success;
-    } catch (error) {
-        console.error('Database initialization failed:', error);
-        return false;
-    }
+    return initializationPromise;
 }
