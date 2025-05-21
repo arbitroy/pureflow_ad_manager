@@ -62,7 +62,7 @@ export default function PlatformsSettings() {
             'pages_read_engagement'
         ].join(',');
 
-        const facebookAuthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scopes}&response_type=code&state=facebook`;
+        const facebookAuthUrl = `https://www.facebook.com/v22.0/dialog/oauth?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scopes}&response_type=code&state=facebook`;
 
         // Redirect to Facebook auth page
         window.location.href = facebookAuthUrl;
@@ -84,7 +84,7 @@ export default function PlatformsSettings() {
             'pages_read_engagement'
         ].join(',');
 
-        const instagramAuthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scopes}&response_type=code&state=instagram`;
+        const instagramAuthUrl = `https://www.facebook.com/v22.0/dialog/oauth?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scopes}&response_type=code&state=instagram`;
 
         // Redirect to Facebook auth page for Instagram
         window.location.href = instagramAuthUrl;

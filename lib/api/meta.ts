@@ -1,7 +1,7 @@
 import { Campaign, GeoZone, GeoZoneType, Platform, PlatformName } from '@/types/models';
 
 // Meta API configuration
-const META_API_VERSION = 'v18.0';
+const META_API_VERSION = 'v22.0';
 const META_BASE_URL = `https://graph.facebook.com/${META_API_VERSION}`;
 
 // Types for Meta API
