@@ -74,24 +74,27 @@ const Navbar = () => {
                                 <button className="h-8 w-8 rounded-full bg-pure-secondary flex items-center justify-center" aria-label="User menu">
                                     <span className="text-white font-bold">{avatarText}</span>
                                 </button>
-<div className="absolute right-0 mt-2 w-48 bg-pure-light-dark rounded-md shadow-lg overflow-hidden z-20 opacity-0 scale-95 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-200 ease-in-out origin-top-right">                                    <div className="py-2">
-                                        <div className="px-4 py-3 border-b border-pure-dark">
-                                            <p className="text-sm text-white">Signed in as</p>
-                                            <p className="text-sm font-medium text-pure-primary truncate">{user?.email}</p>
-                                        </div>
-                                        <Link href="/profile" className="block px-4 py-2 text-sm text-white hover:bg-pure-dark">
-                                            Your Profile
-                                        </Link>
-                                        <Link href="/settings" className="block px-4 py-2 text-sm text-white hover:bg-pure-dark">
-                                            Settings
-                                        </Link>
-                                        <button
-                                            onClick={handleLogout}
-                                            className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-pure-dark"
-                                        >
-                                            Sign out
-                                        </button>
+                                <div className="absolute right-0 mt-2 w-48 bg-pure-light-dark rounded-md shadow-lg overflow-hidden z-20 opacity-0 scale-95 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-200 ease-in-out origin-top-right">                                    <div className="py-2">
+                                    <div className="px-4 py-3 border-b border-pure-dark">
+                                        <p className="text-sm text-white">Signed in as</p>
+                                        <p className="text-sm font-medium text-pure-primary truncate">{user?.email}</p>
                                     </div>
+                                    <Link href="/profile" className="block px-4 py-2 text-sm text-white hover:bg-pure-dark">
+                                        Your Profile
+                                    </Link>
+                                    <Link href="/settings" className="block px-4 py-2 text-sm text-white hover:bg-pure-dark">
+                                        Settings
+                                    </Link>
+                                    <Link href="/settings/platforms" className="block px-4 py-2 text-sm text-white hover:bg-pure-dark">
+                                        Connected Platforms
+                                    </Link>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-pure-dark"
+                                    >
+                                        Sign out
+                                    </button>
+                                </div>
                                 </div>
                             </div>
                         </div>
