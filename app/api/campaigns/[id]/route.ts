@@ -1,8 +1,9 @@
+// app/api/campaigns/[id]/route.ts
 import { NextResponse } from 'next/server';
-import { Campaign } from '@/types/models';
 import { verifyAccessToken } from '@/lib/auth';
 import pool from '@/lib/db';
 import { cookies } from 'next/headers';
+import { CampaignStatus } from '@/types/models';
 
 // GET a specific campaign
 export async function GET(
@@ -35,8 +36,8 @@ export async function GET(
 
         // Get campaign data
         const [campaignRows] = await pool.query(
-            'SELECT * FROM campaigns WHERE id = ?',
-            [campaignId]
+            'SELECT * FROM campaigns WHERE id = ? AND created_by = ?',
+            [campaignId, tokenData.userId]
         );
 
         if ((campaignRows as any[]).length === 0) {
@@ -225,72 +226,204 @@ export async function PUT(
         const id = params.id;
         const body = await request.json();
 
-        // Validate the update - this will depend on what fields you're allowing to be updated
-        // For a status-only update, we need to validate the status value
+        // First, check if the campaign exists and belongs to the user
+        const [existingCampaigns] = await pool.query(
+            'SELECT * FROM campaigns WHERE id = ? AND created_by = ?',
+            [id, tokenData.userId]
+        );
+
+        if ((existingCampaigns as any[]).length === 0) {
+            return NextResponse.json(
+                { success: false, message: 'Campaign not found or you do not have permission to update it' },
+                { status: 404 }
+            );
+        }
+
+        // Validate the update
         if (Object.keys(body).length === 1 && body.status) {
-            const validStatuses = ['DRAFT', 'SCHEDULED', 'ACTIVE', 'PAUSED', 'COMPLETED'];
+            // Status-only update
+            const validStatuses = Object.values(CampaignStatus);
             if (!validStatuses.includes(body.status)) {
                 return NextResponse.json(
                     { success: false, message: 'Invalid status value' },
                     { status: 400 }
                 );
             }
+
+            // Update just the status
+            await pool.query(
+                'UPDATE campaigns SET status = ?, updated_at = NOW() WHERE id = ?',
+                [body.status, id]
+            );
+
+            return NextResponse.json({
+                success: true,
+                message: 'Campaign status updated successfully'
+            });
         } else {
-            // For a full campaign update, validate required fields
-            if (body.name === '') {
-                return NextResponse.json(
-                    { success: false, message: 'Campaign name cannot be empty' },
-                    { status: 400 }
-                );
-            }
+            // Full campaign update
+            // Start a transaction since we might update multiple tables
+            const connection = await pool.getConnection();
+            await connection.beginTransaction();
 
-            if (body.budget !== undefined && body.budget <= 0) {
-                return NextResponse.json(
-                    { success: false, message: 'Budget must be greater than 0' },
-                    { status: 400 }
-                );
-            }
+            try {
+                // Update the campaign basic info
+                const updateFields = [];
+                const updateValues = [];
 
-            if (body.platforms && body.platforms.length === 0) {
-                return NextResponse.json(
-                    { success: false, message: 'At least one platform must be selected' },
-                    { status: 400 }
-                );
-            }
+                // Add fields to update
+                if (body.name !== undefined) {
+                    updateFields.push('name = ?');
+                    updateValues.push(body.name);
+                }
 
-            // Validate date range if both dates are provided
-            if (body.startDate && body.endDate) {
-                const startDate = new Date(body.startDate);
-                const endDate = new Date(body.endDate);
+                if (body.description !== undefined) {
+                    updateFields.push('description = ?');
+                    updateValues.push(body.description);
+                }
 
-                if (startDate > endDate) {
-                    return NextResponse.json(
-                        { success: false, message: 'End date must be after start date' },
-                        { status: 400 }
+                if (body.status !== undefined) {
+                    updateFields.push('status = ?');
+                    updateValues.push(body.status);
+                }
+
+                if (body.budget !== undefined) {
+                    updateFields.push('budget = ?');
+                    updateValues.push(body.budget);
+                }
+
+                if (body.startDate !== undefined) {
+                    updateFields.push('start_date = ?');
+                    updateValues.push(body.startDate ? new Date(body.startDate) : null);
+                }
+
+                if (body.endDate !== undefined) {
+                    updateFields.push('end_date = ?');
+                    updateValues.push(body.endDate ? new Date(body.endDate) : null);
+                }
+
+                if (body.objective !== undefined) {
+                    updateFields.push('objective = ?');
+                    updateValues.push(body.objective);
+                }
+
+                // Add updated_at field
+                updateFields.push('updated_at = NOW()');
+
+                // Add campaign ID to values for WHERE clause
+                updateValues.push(id);
+
+                // Update the campaign
+                if (updateFields.length > 0) {
+                    await connection.query(
+                        `UPDATE campaigns SET ${updateFields.join(', ')} WHERE id = ?`,
+                        updateValues
                     );
                 }
+
+                // Update platforms if included in the request
+                if (body.platforms !== undefined) {
+                    // Remove existing platform associations
+                    await connection.query(
+                        'DELETE FROM campaign_platforms WHERE campaign_id = ?',
+                        [id]
+                    );
+
+                    // Add new platform associations
+                    if (body.platforms.length > 0) {
+                        for (const platform of body.platforms) {
+                            const platformId = typeof platform === 'string' ? platform : platform.id;
+                            await connection.query(
+                                'INSERT INTO campaign_platforms (campaign_id, platform_id) VALUES (?, ?)',
+                                [id, platformId]
+                            );
+                        }
+                    }
+                }
+
+                // Update geo zones if included in the request
+                if (body.geoZones !== undefined) {
+                    // Remove existing geo zone associations
+                    await connection.query(
+                        'DELETE FROM campaign_geo_zones WHERE campaign_id = ?',
+                        [id]
+                    );
+
+                    // Add new geo zone associations
+                    if (body.geoZones.length > 0) {
+                        for (const geoZone of body.geoZones) {
+                            const geoZoneId = typeof geoZone === 'string' ? geoZone : geoZone.id;
+                            await connection.query(
+                                'INSERT INTO campaign_geo_zones (campaign_id, geo_zone_id) VALUES (?, ?)',
+                                [id, geoZoneId]
+                            );
+                        }
+                    }
+                }
+
+                // Update ad creative if included in the request
+                if (body.adCreative !== undefined) {
+                    // Check if ad creative exists
+                    const [existingCreatives] = await connection.query(
+                        'SELECT id FROM ad_creatives WHERE campaign_id = ?',
+                        [id]
+                    );
+
+                    if ((existingCreatives as any[]).length > 0) {
+                        // Update existing creative
+                        const creativeId = (existingCreatives as any[])[0].id;
+                        await connection.query(
+                            `UPDATE ad_creatives 
+                            SET title = ?, body = ?, image_url = ?, video_url = ?, 
+                                call_to_action_type = ?, call_to_action_link = ?, 
+                                updated_at = NOW() 
+                            WHERE id = ?`,
+                            [
+                                body.adCreative.title,
+                                body.adCreative.body,
+                                body.adCreative.imageUrl || null,
+                                body.adCreative.videoUrl || null,
+                                body.adCreative.callToAction?.type || null,
+                                body.adCreative.callToAction?.value?.link || null,
+                                creativeId
+                            ]
+                        );
+                    } else {
+                        // Create new creative
+                        const creativeId = uuidv4();
+                        await connection.query(
+                            `INSERT INTO ad_creatives 
+                            (id, campaign_id, title, body, image_url, video_url, call_to_action_type, call_to_action_link) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                            [
+                                creativeId,
+                                id,
+                                body.adCreative.title,
+                                body.adCreative.body,
+                                body.adCreative.imageUrl || null,
+                                body.adCreative.videoUrl || null,
+                                body.adCreative.callToAction?.type || null,
+                                body.adCreative.callToAction?.value?.link || null
+                            ]
+                        );
+                    }
+                }
+
+                // Commit the transaction
+                await connection.commit();
+
+                return NextResponse.json({
+                    success: true,
+                    message: 'Campaign updated successfully'
+                });
+            } catch (error) {
+                // Rollback on error
+                await connection.rollback();
+                throw error;
+            } finally {
+                connection.release();
             }
         }
-
-        // In a real app, update the campaign in the database
-        // For now, we'll simulate a successful update
-
-        // Simulate database delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Construct the updated campaign object
-        // In a real app, you would fetch the existing campaign first, then apply updates
-        const updatedCampaign = {
-            id,
-            ...body,
-            updatedAt: new Date()
-        };
-
-        return NextResponse.json({
-            success: true,
-            message: 'Campaign updated successfully',
-            data: updatedCampaign
-        });
     } catch (error) {
         console.error(`Error updating campaign ${params.id}:`, error);
         return NextResponse.json(
@@ -327,9 +460,22 @@ export async function DELETE(
 
         const id = params.id;
 
-        // In a real app, you would delete from database
-        // Simulate database interaction
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // Check if campaign exists and belongs to user
+        const [campaigns] = await pool.query(
+            'SELECT id FROM campaigns WHERE id = ? AND created_by = ?',
+            [id, tokenData.userId]
+        );
+
+        if ((campaigns as any[]).length === 0) {
+            return NextResponse.json(
+                { success: false, message: 'Campaign not found or you do not have permission to delete it' },
+                { status: 404 }
+            );
+        }
+
+        // Delete the campaign
+        // Note: Foreign key constraints will automatically delete related records in other tables
+        await pool.query('DELETE FROM campaigns WHERE id = ?', [id]);
 
         return NextResponse.json({
             success: true,

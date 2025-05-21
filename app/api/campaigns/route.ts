@@ -1,45 +1,10 @@
+// app/api/campaigns/route.ts
 import { NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { Campaign, CampaignStatus, PlatformName } from '@/types/models';
 import pool from '@/lib/db';
 import { verifyAccessToken } from '@/lib/auth';
 import { cookies } from 'next/headers';
-
-// Mock campaigns data (for reference only - will be replaced by database access)
-const mockCampaigns: Partial<Campaign>[] = [
-    {
-        id: '1',
-        name: 'Summer Collection Launch',
-        description: 'Promote our new summer collection',
-        platforms: [
-            {
-                id: '1',
-                name: PlatformName.FACEBOOK,
-                accountId: 'fb123',
-                accessToken: 'token123',
-                createdAt: new Date(),
-                updatedAt: new Date()
-            },
-            {
-                id: '2',
-                name: PlatformName.INSTAGRAM,
-                accountId: 'ig123',
-                accessToken: 'token456',
-                createdAt: new Date(),
-                updatedAt: new Date()
-            }
-        ],
-        status: CampaignStatus.ACTIVE,
-        budget: 1200,
-        startDate: new Date('2025-05-15'),
-        endDate: new Date('2025-06-15'),
-        geoZones: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        createdBy: '1'
-    },
-    // other mock campaigns...
-];
 
 // GET all campaigns
 export async function GET(request: Request) {
@@ -63,15 +28,90 @@ export async function GET(request: Request) {
             );
         }
         
-        // In a real app, you'd fetch this from a database with the user's ID
-        // For now, we'll return mock data
+        // Fetch campaigns from database
+        const [campaignRows] = await pool.query(
+            `SELECT c.* 
+             FROM campaigns c
+             WHERE c.created_by = ?
+             ORDER BY c.created_at DESC`,
+            [tokenData.userId]
+        );
+ 
+        const campaigns = [];
         
-        // Simulate fetching campaigns from database
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // For each campaign, get associated platforms and geo zones
+        for (const campaign of (campaignRows as any[])) {
+            // Get platforms
+            const [platformRows] = await pool.query(
+                `SELECT p.id, p.name, p.account_id 
+                 FROM platforms p
+                 JOIN campaign_platforms cp ON p.id = cp.platform_id
+                 WHERE cp.campaign_id = ?`,
+                [campaign.id]
+            );
+            
+            // Get geo zones
+            const [geoZoneRows] = await pool.query(
+                `SELECT gz.id, gz.name, gz.type, gz.center_lat, gz.center_lng, gz.radius_km 
+                 FROM geo_zones gz
+                 JOIN campaign_geo_zones cgz ON gz.id = cgz.geo_zone_id
+                 WHERE cgz.campaign_id = ?`,
+                [campaign.id]
+            );
+            
+            // Get analytics summary if available
+            const [analyticsRows] = await pool.query(
+                `SELECT 
+                   SUM(impressions) as impressions,
+                   SUM(clicks) as clicks,
+                   SUM(conversions) as conversions,
+                   AVG(roi) as roi
+                 FROM analytics
+                 WHERE campaign_id = ?
+                 GROUP BY campaign_id`,
+                [campaign.id]
+            );
+            
+            const analytics = (analyticsRows as any[]).length > 0 ? (analyticsRows as any[])[0] : null;
+            
+            // Format campaign with relationships
+            campaigns.push({
+                id: campaign.id,
+                name: campaign.name,
+                description: campaign.description,
+                status: campaign.status,
+                budget: parseFloat(campaign.budget),
+                startDate: campaign.start_date,
+                endDate: campaign.end_date,
+                objective: campaign.objective,
+                platforms: (platformRows as any[]).map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    accountId: p.account_id
+                })),
+                geoZones: (geoZoneRows as any[]).map(gz => ({
+                    id: gz.id,
+                    name: gz.name,
+                    type: gz.type,
+                    centerLat: gz.center_lat,
+                    centerLng: gz.center_lng,
+                    radiusKm: gz.radius_km
+                })),
+                analytics: analytics ? {
+                    impressions: analytics.impressions || 0,
+                    clicks: analytics.clicks || 0,
+                    conversions: analytics.conversions || 0,
+                    roi: analytics.roi || 0
+                } : undefined,
+                createdAt: campaign.created_at,
+                updatedAt: campaign.updated_at,
+                createdBy: campaign.created_by
+            });
+        }
         
         return NextResponse.json({
             success: true,
-            data: mockCampaigns
+            data: campaigns
         });
     } catch (error) {
         console.error('Error fetching campaigns:', error);
@@ -121,44 +161,120 @@ export async function POST(request: Request) {
             );
         }
         
-        if (body.platforms?.length === 0) {
-            return NextResponse.json(
-                { success: false, message: 'At least one platform must be selected' },
-                { status: 400 }
-            );
-        }
-        
         // Generate a new ID
         const campaignId = uuidv4();
         
-        // Set up the campaign object
-        const newCampaign: Partial<Campaign> = {
-            id: campaignId,
-            name: body.name,
-            description: body.description,
-            platforms: body.platforms,
-            status: body.status || CampaignStatus.DRAFT,
-            budget: body.budget,
-            startDate: body.startDate ? new Date(body.startDate) : undefined,
-            endDate: body.endDate ? new Date(body.endDate) : undefined,
-            geoZones: body.geoZones || [],
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            createdBy: tokenData.userId
-        };
+        // Extract data 
+        const { 
+            name, 
+            description, 
+            status = CampaignStatus.DRAFT, 
+            budget, 
+            startDate, 
+            endDate,
+            objective = 'CONSIDERATION',
+            platforms = [],
+            geoZones = [],
+            adCreative = null
+        } = body;
         
-        // In a real app, save the campaign to the database
-        // For now, just add to mock data array
-        mockCampaigns.push(newCampaign);
+        // Begin transaction
+        const connection = await pool.getConnection();
+        await connection.beginTransaction();
         
-        // Simulate database interaction delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        return NextResponse.json({
-            success: true,
-            message: 'Campaign created successfully',
-            data: newCampaign
-        }, { status: 201 });
+        try {
+            // Insert campaign record
+            await connection.query(
+                `INSERT INTO campaigns 
+                (id, name, description, status, budget, start_date, end_date, objective, created_by) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    campaignId, 
+                    name, 
+                    description || null, 
+                    status, 
+                    budget, 
+                    startDate ? new Date(startDate) : null, 
+                    endDate ? new Date(endDate) : null,
+                    objective,
+                    tokenData.userId
+                ]
+            );
+            
+            // Insert platform relationships
+            if (platforms && platforms.length > 0) {
+                for (const platform of platforms) {
+                    const platformId = typeof platform === 'string' ? platform : platform.id;
+                    await connection.query(
+                        `INSERT INTO campaign_platforms (campaign_id, platform_id) VALUES (?, ?)`,
+                        [campaignId, platformId]
+                    );
+                }
+            }
+            
+            // Insert geo zone relationships
+            if (geoZones && geoZones.length > 0) {
+                for (const geoZone of geoZones) {
+                    const geoZoneId = typeof geoZone === 'string' ? geoZone : geoZone.id;
+                    await connection.query(
+                        `INSERT INTO campaign_geo_zones (campaign_id, geo_zone_id) VALUES (?, ?)`,
+                        [campaignId, geoZoneId]
+                    );
+                }
+            }
+            
+            // Insert ad creative if provided
+            if (adCreative) {
+                const creativeId = uuidv4();
+                await connection.query(
+                    `INSERT INTO ad_creatives 
+                    (id, campaign_id, title, body, image_url, video_url, call_to_action_type, call_to_action_link) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [
+                        creativeId,
+                        campaignId,
+                        adCreative.title,
+                        adCreative.body,
+                        adCreative.imageUrl || null,
+                        adCreative.videoUrl || null,
+                        adCreative.callToAction?.type || null,
+                        adCreative.callToAction?.value?.link || null
+                    ]
+                );
+            }
+            
+            // Commit the transaction
+            await connection.commit();
+            
+            // Return the created campaign with ID
+            return NextResponse.json({
+                success: true,
+                message: 'Campaign created successfully',
+                data: {
+                    id: campaignId,
+                    name,
+                    description,
+                    status,
+                    budget,
+                    startDate,
+                    endDate,
+                    objective,
+                    platforms,
+                    geoZones,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    createdBy: tokenData.userId
+                }
+            }, { status: 201 });
+            
+        } catch (error) {
+            // Rollback on error
+            await connection.rollback();
+            throw error;
+        } finally {
+            // Release connection
+            connection.release();
+        }
     } catch (error) {
         console.error('Error creating campaign:', error);
         return NextResponse.json(

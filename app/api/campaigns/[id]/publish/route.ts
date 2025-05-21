@@ -1,3 +1,4 @@
+// app/api/campaigns/[id]/publish/route.ts
 import { NextResponse } from 'next/server';
 import { verifyAccessToken } from '@/lib/auth';
 import pool from '@/lib/db';
@@ -47,14 +48,14 @@ export async function POST(
         try {
             // Get campaign data
             const [campaignRows] = await connection.query(
-                'SELECT * FROM campaigns WHERE id = ?',
-                [campaignId]
+                'SELECT * FROM campaigns WHERE id = ? AND created_by = ?',
+                [campaignId, tokenData.userId]
             );
 
             if ((campaignRows as any[]).length === 0) {
                 await connection.rollback();
                 return NextResponse.json(
-                    { success: false, message: 'Campaign not found' },
+                    { success: false, message: 'Campaign not found or you do not have permission to publish it' },
                     { status: 404 }
                 );
             }
@@ -73,8 +74,8 @@ export async function POST(
             // Get platforms for this campaign
             const [platformRows] = await connection.query(
                 `SELECT p.* FROM platforms p
-         JOIN campaign_platforms cp ON p.id = cp.platform_id
-         WHERE cp.campaign_id = ?`,
+                 JOIN campaign_platforms cp ON p.id = cp.platform_id
+                 WHERE cp.campaign_id = ?`,
                 [campaignId]
             );
 
@@ -130,8 +131,8 @@ export async function POST(
             // Get geo zones for this campaign
             const [geoZoneRows] = await connection.query(
                 `SELECT gz.* FROM geo_zones gz
-         JOIN campaign_geo_zones cgz ON gz.id = cgz.geo_zone_id
-         WHERE cgz.campaign_id = ?`,
+                 JOIN campaign_geo_zones cgz ON gz.id = cgz.geo_zone_id
+                 WHERE cgz.campaign_id = ?`,
                 [campaignId]
             );
 
@@ -182,10 +183,14 @@ export async function POST(
                 createdBy: campaignData.created_by
             };
 
-            // Update campaign status to ACTIVE
+            // Update campaign status to ACTIVE or SCHEDULED
+            const newStatus = campaign.startDate && campaign.startDate > new Date() 
+                ? CampaignStatus.SCHEDULED 
+                : CampaignStatus.ACTIVE;
+                
             await connection.query(
                 'UPDATE campaigns SET status = ?, updated_at = NOW() WHERE id = ?',
-                [CampaignStatus.ACTIVE, campaignId]
+                [newStatus, campaignId]
             );
 
             // Create campaigns on each platform
@@ -195,8 +200,8 @@ export async function POST(
                     // Set platform status to PENDING
                     await connection.query(
                         `UPDATE campaign_platforms 
-             SET platform_status = 'PENDING', updated_at = NOW()
-             WHERE campaign_id = ? AND platform_id = ?`,
+                         SET platform_status = 'PENDING', updated_at = NOW()
+                         WHERE campaign_id = ? AND platform_id = ?`,
                         [campaignId, platform.id]
                     );
 
@@ -241,8 +246,8 @@ export async function POST(
                     // Update platform status to PUBLISHED
                     await connection.query(
                         `UPDATE campaign_platforms 
-             SET platform_status = 'PUBLISHED', last_synced = NOW(), updated_at = NOW()
-             WHERE campaign_id = ? AND platform_id = ?`,
+                         SET platform_status = 'PUBLISHED', last_synced = NOW(), updated_at = NOW()
+                         WHERE campaign_id = ? AND platform_id = ?`,
                         [campaignId, platform.id]
                     );
                 } catch (error) {
@@ -252,8 +257,8 @@ export async function POST(
                     // Update platform status to FAILED with error message
                     await connection.query(
                         `UPDATE campaign_platforms 
-             SET platform_status = 'FAILED', platform_error = ?, updated_at = NOW()
-             WHERE campaign_id = ? AND platform_id = ?`,
+                         SET platform_status = 'FAILED', platform_error = ?, updated_at = NOW()
+                         WHERE campaign_id = ? AND platform_id = ?`,
                         [
                             error instanceof Error ? error.message : 'Unknown error',
                             campaignId,
@@ -271,7 +276,8 @@ export async function POST(
                 success: true,
                 message: hasErrors
                     ? 'Campaign published with some errors. Check platform status for details.'
-                    : 'Campaign published successfully'
+                    : 'Campaign published successfully',
+                newStatus
             });
         } catch (error) {
             // Rollback transaction on error

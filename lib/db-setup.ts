@@ -177,6 +177,13 @@ async function createTablesIfNotExist() {
   ip_address VARCHAR(45),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+)`,
+`CREATE TABLE IF NOT EXISTS user_platforms (
+  user_id VARCHAR(36) NOT NULL,
+  platform_id VARCHAR(36) NOT NULL,
+  PRIMARY KEY (user_id, platform_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (platform_id) REFERENCES platforms(id) ON DELETE CASCADE
 )`
         ];
 
