@@ -1,17 +1,13 @@
 import mysql from 'mysql2/promise';
-import { ensureDatabaseInitialized } from './db-init';
-
 // Lazy-loaded pool creation
 let pool: mysql.Pool | null = null;
 
 export async function getPool(): Promise<mysql.Pool> {
     if (!pool) {
-        // Ensure database is initialized before creating the pool
-        await ensureDatabaseInitialized();
 
         pool = mysql.createPool({
             host: process.env.DB_HOST || 'localhost',
-            user: process.env.DB_USER || 'pureflow',
+            user: process.env.DB_USER || 'root',
             password: process.env.DB_PASSWORD || '12345',
             database: process.env.DB_NAME || 'pureflow_db',
             waitForConnections: true,

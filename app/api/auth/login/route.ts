@@ -5,19 +5,10 @@ import {
     generateTokens,
     saveRefreshToken
 } from '@/lib/auth';
-import { ensureDatabaseInitialized } from '@/lib/db-init';
 import pool from '@/lib/db';
 
 export async function POST(request: Request) {
     try {
-        // Ensure database is initialized
-        const dbReady = await ensureDatabaseInitialized();
-        if (!dbReady) {
-            return NextResponse.json(
-                { success: false, message: 'Database unavailable, try again later' },
-                { status: 503 }
-            );
-        }
 
         const body = await request.json();
         const { email, password, rememberMe = false } = body;

@@ -47,20 +47,49 @@ export async function migrateMetaTablesAndFields(): Promise<boolean> {
       )
     `);
 
-        // Add platform_status field to campaign_platforms table
-        await connection.query(`
-      ALTER TABLE campaign_platforms
-      ADD COLUMN IF NOT EXISTS platform_status ENUM('PENDING', 'PUBLISHED', 'FAILED') DEFAULT 'PENDING',
-      ADD COLUMN IF NOT EXISTS platform_error TEXT,
-      ADD COLUMN IF NOT EXISTS last_synced TIMESTAMP NULL
-    `);
+        // Check if campaign_platforms table exists
+        const [tables] = await connection.query(
+            `SELECT * FROM information_schema.TABLES 
+             WHERE TABLE_SCHEMA = DATABASE() 
+             AND TABLE_NAME = 'campaign_platforms'`
+        );
 
-        // Add objective and platform_data fields to campaigns table
-        await connection.query(`
-      ALTER TABLE campaigns
-      ADD COLUMN IF NOT EXISTS objective ENUM('AWARENESS', 'CONSIDERATION', 'CONVERSION') DEFAULT 'CONSIDERATION',
-      ADD COLUMN IF NOT EXISTS platform_data JSON
-    `);
+        if ((tables as any[]).length > 0) {
+            // Check if columns exist before adding them
+            const [columns] = await connection.query(
+                `SELECT * FROM information_schema.COLUMNS 
+                 WHERE TABLE_SCHEMA = DATABASE() 
+                 AND TABLE_NAME = 'campaign_platforms'
+                 AND COLUMN_NAME = 'platform_status'`
+            );
+
+            if ((columns as any[]).length === 0) {
+                // Add platform_status field to campaign_platforms table
+                await connection.query(`
+                  ALTER TABLE campaign_platforms
+                  ADD COLUMN platform_status ENUM('PENDING', 'PUBLISHED', 'FAILED') DEFAULT 'PENDING',
+                  ADD COLUMN platform_error TEXT,
+                  ADD COLUMN last_synced TIMESTAMP NULL
+                `);
+            }
+        }
+
+        // Check if objective column exists in campaigns table
+        const [campaignColumns] = await connection.query(
+            `SELECT * FROM information_schema.COLUMNS 
+             WHERE TABLE_SCHEMA = DATABASE() 
+             AND TABLE_NAME = 'campaigns'
+             AND COLUMN_NAME = 'objective'`
+        );
+
+        if ((campaignColumns as any[]).length === 0) {
+            // Add objective and platform_data fields to campaigns table
+            await connection.query(`
+              ALTER TABLE campaigns
+              ADD COLUMN objective ENUM('AWARENESS', 'CONSIDERATION', 'CONVERSION') DEFAULT 'CONSIDERATION',
+              ADD COLUMN platform_data JSON
+            `);
+        }
 
         // Commit transaction
         await connection.commit();
