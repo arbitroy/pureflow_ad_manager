@@ -9,6 +9,7 @@
     "lint": "next lint",
     "init-db": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/init-db.ts",
     "setup": "npm run init-db",
+    "setup-maps": "node scripts/setup-maps.js",
     "dev:with-db": "npm run init-db && npm run dev"
   },
   "dependencies": {

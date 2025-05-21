@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import PageContainer from '@/components/PageContainer';
 import { Campaign, CampaignStatus, Platform, PlatformName, GeoZone } from '@/types/models';
+import CampaignGeoMap from '@/components/campaign/CampaignGeoMap';
 
 export default function CampaignDetail() {
     const router = useRouter();
@@ -451,62 +452,9 @@ export default function CampaignDetail() {
             )}
 
             {/* Geographic Targeting */}
-            <h2 className="text-xl font-medium mt-8 mb-4">Geographic Targeting</h2>
-
-            {geoZones && geoZones.length > 0 ? (
-                <div className="bg-pure-light-dark rounded-lg overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full">
-                            <thead>
-                                <tr className="bg-pure-dark">
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                        Zone Name
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                        Type
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                        Size
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-pure-dark">
-                                {geoZones.map((zone, index) => (
-                                    <motion.tr
-                                        key={zone.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.2, delay: index * 0.05 }}
-                                    >
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-white">{zone.name}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span
-                                                className={`px-2 py-1 text-xs rounded-full ${zone.type === 'CIRCLE' ? 'bg-blue-900 text-blue-200' : 'bg-purple-900 text-purple-200'
-                                                    }`}
-                                            >
-                                                {zone.type}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                                            {zone.type === 'CIRCLE'
-                                                ? `${zone.radiusKm} km radius`
-                                                : `${zone.points?.length || 0} points polygon`}
-                                        </td>
-                                    </motion.tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            ) : (
-                <div className="card p-6">
-                    <p className="text-center text-gray-400">
-                        No geographic targeting specified for this campaign.
-                    </p>
-                </div>
-            )}
+            <div className="mt-8">
+                <CampaignGeoMap geoZones={geoZones || []} />
+            </div>
         </PageContainer>
     );
 }
