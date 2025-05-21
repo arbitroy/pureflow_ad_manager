@@ -130,86 +130,102 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
     };
 
     return (
-        <LoadScript
-            googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
-            libraries={libraries as any}
+        <GoogleMap
+            mapContainerStyle={containerStyle}
+            center={center}
+            zoom={zoom}
+            onLoad={onLoad}
+            onUnmount={onUnmount}
+            options={{
+                mapTypeControl: true,
+                streetViewControl: false,
+                fullscreenControl: true,
+                styles: [
+                    {
+                        featureType: 'all',
+                        elementType: 'all',
+                        stylers: [{
+                            saturation: -50
+                        }]
+                    }
+                ]
+            }}
         >
-            <GoogleMap
-                mapContainerStyle={containerStyle}
-                center={center}
-                zoom={zoom}
-                onLoad={onLoad}
-                onUnmount={onUnmount}
-                options={{
-                    mapTypeControl: true,
-                    streetViewControl: false,
-                    fullscreenControl: true,
-                    styles: [
-                        {
-                            featureType: 'all',
-                            elementType: 'all',
-                            stylers: [{
-                                saturation: -50
-                            }]
+            {/* Drawing Manager - only shown when not in read-only mode */}
+            {!readOnly && (
+                <DrawingManager
+                    onLoad={onDrawingManagerLoad}
+                    onCircleComplete={onCircleComplete}
+                    onPolygonComplete={onPolygonComplete}
+                    options={{
+                        drawingControl: false, // We'll use our own UI controls
+                        circleOptions: {
+                            fillColor: '#3e91ff',
+                            fillOpacity: 0.2,
+                            strokeColor: '#3e91ff',
+                            strokeWeight: 2,
+                            editable: true,
+                            draggable: true,
+                            zIndex: 1
+                        },
+                        polygonOptions: {
+                            fillColor: '#3e91ff',
+                            fillOpacity: 0.2,
+                            strokeColor: '#3e91ff',
+                            strokeWeight: 2,
+                            editable: true,
+                            draggable: true,
+                            zIndex: 1
                         }
-                    ]
-                }}
-            >
-                {/* Drawing Manager - only shown when not in read-only mode */}
-                {!readOnly && (
-                    <DrawingManager
-                        onLoad={onDrawingManagerLoad}
-                        onCircleComplete={onCircleComplete}
-                        onPolygonComplete={onPolygonComplete}
-                        options={{
-                            drawingControl: false, // We'll use our own UI controls
-                            circleOptions: {
-                                fillColor: '#3e91ff',
-                                fillOpacity: 0.2,
-                                strokeColor: '#3e91ff',
-                                strokeWeight: 2,
-                                editable: true,
-                                draggable: true,
-                                zIndex: 1
-                            },
-                            polygonOptions: {
-                                fillColor: '#3e91ff',
-                                fillOpacity: 0.2,
-                                strokeColor: '#3e91ff',
-                                strokeWeight: 2,
-                                editable: true,
-                                draggable: true,
-                                zIndex: 1
-                            }
-                        }}
-                    />
-                )}
+                    }}
+                />
+            )}
 
-                {/* Render saved zones */}
-                {savedZones.map((zone) => {
-                    if (zone.type === GeoZoneType.CIRCLE && zone.centerLat && zone.centerLng && zone.radiusKm) {
-                        return (
-                            <Circle
-                                key={zone.id}
-                                center={{ lat: zone.centerLat, lng: zone.centerLng }}
-                                radius={zone.radiusKm * 1000} // Convert km to meters
-                                options={{
-                                    fillColor: selectedZone?.id === zone.id ? '#ff762e' : '#3e91ff',
-                                    fillOpacity: 0.2,
-                                    strokeColor: selectedZone?.id === zone.id ? '#ff762e' : '#3e91ff',
-                                    strokeWeight: 2,
-                                    zIndex: selectedZone?.id === zone.id ? 2 : 1,
-                                    editable: !readOnly && selectedZone?.id === zone.id,
-                                    draggable: !readOnly && selectedZone?.id === zone.id
-                                }}
-                                onClick={() => handleZoneClick(zone)}
-                            />
-                        );
-                    } else if (zone.type === GeoZoneType.POLYGON && zone.points && zone.points.length > 0) {
+            {/* Render saved zones */}
+            {savedZones.map((zone) => {
+                if (
+                    zone.type === GeoZoneType.CIRCLE &&
+                    zone.centerLat !== undefined &&
+                    zone.centerLng !== undefined &&
+                    zone.radiusKm !== undefined &&
+                    !isNaN(Number(zone.centerLat)) &&
+                    !isNaN(Number(zone.centerLng)) &&
+                    !isNaN(Number(zone.radiusKm))
+                ) {
+                    return (
+                        <Circle
+                            key={zone.id}
+                            center={{
+                                lat: Number(zone.centerLat),
+                                lng: Number(zone.centerLng)
+                            }}
+                            radius={Number(zone.radiusKm) * 1000} // Convert km to meters
+                            options={{
+                                fillColor: selectedZone?.id === zone.id ? '#ff762e' : '#3e91ff',
+                                fillOpacity: 0.2,
+                                strokeColor: selectedZone?.id === zone.id ? '#ff762e' : '#3e91ff',
+                                strokeWeight: 2,
+                                zIndex: selectedZone?.id === zone.id ? 2 : 1,
+                                editable: !readOnly && selectedZone?.id === zone.id,
+                                draggable: !readOnly && selectedZone?.id === zone.id
+                            }}
+                            onClick={() => handleZoneClick(zone)}
+                        />
+                    );
+                } else if (zone.type === GeoZoneType.POLYGON && zone.points && zone.points.length > 0) {
+                    // Make sure polygon points are also valid numbers
+                    const validPoints = zone.points.every(point =>
+                        !isNaN(Number(point.lat)) && !isNaN(Number(point.lng))
+                    );
+
+                    if (validPoints) {
                         return (
                             <Polygon
                                 key={zone.id}
-                                paths={zone.points}
+                                paths={zone.points.map(point => ({
+                                    lat: Number(point.lat),
+                                    lng: Number(point.lng)
+                                }))}
                                 options={{
                                     fillColor: selectedZone?.id === zone.id ? '#ff762e' : '#3e91ff',
                                     fillOpacity: 0.2,
@@ -223,10 +239,10 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
                             />
                         );
                     }
-                    return null;
-                })}
-            </GoogleMap>
-        </LoadScript>
+                }
+                return null;
+            })}
+        </GoogleMap>
     );
 };
 

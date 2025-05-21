@@ -1,6 +1,5 @@
 'use client';
 
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import PageContainer from '@/components/PageContainer';
@@ -295,119 +294,120 @@ export default function GeoFencing() {
                             />
                         )}
                     </div>
-                    ) : (
-                    <div className="bg-pure-light-dark rounded-lg overflow-hidden">
-                        <div className="p-4 flex justify-between items-center">
-                            <h3 className="text-lg font-medium">Your Saved Zones</h3>
-                            <button
-                                className="btn-primary"
-                                onClick={() => {
-                                    setActiveTab('map');
-                                    setEditZone(null);
-                                }}
+                </div>
+            ) : (
+                <div className="bg-pure-light-dark rounded-lg overflow-hidden">
+                    <div className="p-4 flex justify-between items-center">
+                        <h3 className="text-lg font-medium">Your Saved Zones</h3>
+                        <button
+                            className="btn-primary"
+                            onClick={() => {
+                                setActiveTab('map');
+                                setEditZone(null);
+                            }}
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5 mr-2 inline"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
                             >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-5 w-5 mr-2 inline"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M12 4v16m8-8H4"
-                                    />
-                                </svg>
-                                New Zone
-                            </button>
-                        </div>
-
-                        {loading ? (
-                            <div className="flex items-center justify-center p-8">
-                                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pure-primary"></div>
-                            </div>
-                        ) : savedZones.length === 0 ? (
-                            <div className="p-8 text-center text-gray-400">
-                                No saved zones found. Create your first zone using the map view.
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full">
-                                    <thead>
-                                        <tr className="bg-pure-dark">
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                                Zone Name
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                                Type
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                                Size
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                                Linked Campaigns
-                                            </th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                                Actions
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-pure-dark">
-                                        {savedZones.map((zone, index) => (
-                                            <motion.tr
-                                                key={zone.id}
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ duration: 0.2, delay: index * 0.05 }}
-                                            >
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm font-medium text-white">{zone.name}</div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span
-                                                        className={`px-2 py-1 text-xs rounded-full ${zone.type === GeoZoneType.CIRCLE ? 'bg-blue-900 text-blue-200' : 'bg-purple-900 text-purple-200'
-                                                            }`}
-                                                    >
-                                                        {zone.type}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                                                    {zone.type === GeoZoneType.CIRCLE ? formatRadius(zone.radiusKm) : formatPoints(zone.points)}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                                                    {zone.campaigns > 0 ? (
-                                                        <span className="px-2 py-1 text-xs rounded-full bg-green-900 text-green-200">
-                                                            {zone.campaigns} {zone.campaigns === 1 ? 'campaign' : 'campaigns'}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-gray-400">None</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                    <button
-                                                        className="text-pure-primary hover:text-pure-secondary mr-4"
-                                                        onClick={() => handleEditZone(zone)}
-                                                    >
-                                                        Edit
-                                                    </button>
-                                                    <button
-                                                        className="text-red-400 hover:text-red-300"
-                                                        onClick={() => zone.id && handleDeleteZone(zone.id)}
-                                                        disabled={loading || (zone.campaigns && zone.campaigns > 0)}
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                </td>
-                                            </motion.tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 4v16m8-8H4"
+                                />
+                            </svg>
+                            New Zone
+                        </button>
                     </div>
+
+                    {loading ? (
+                        <div className="flex items-center justify-center p-8">
+                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pure-primary"></div>
+                        </div>
+                    ) : savedZones.length === 0 ? (
+                        <div className="p-8 text-center text-gray-400">
+                            No saved zones found. Create your first zone using the map view.
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full">
+                                <thead>
+                                    <tr className="bg-pure-dark">
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            Zone Name
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            Type
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            Size
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            Linked Campaigns
+                                        </th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-pure-dark">
+                                    {savedZones.map((zone, index) => (
+                                        <motion.tr
+                                            key={zone.id}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ duration: 0.2, delay: index * 0.05 }}
+                                        >
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm font-medium text-white">{zone.name}</div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span
+                                                    className={`px-2 py-1 text-xs rounded-full ${zone.type === GeoZoneType.CIRCLE ? 'bg-blue-900 text-blue-200' : 'bg-purple-900 text-purple-200'
+                                                        }`}
+                                                >
+                                                    {zone.type}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                                                {zone.type === GeoZoneType.CIRCLE ? formatRadius(zone.radiusKm) : formatPoints(zone.points)}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                                                {zone.campaigns > 0 ? (
+                                                    <span className="px-2 py-1 text-xs rounded-full bg-green-900 text-green-200">
+                                                        {zone.campaigns} {zone.campaigns === 1 ? 'campaign' : 'campaigns'}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-gray-400">None</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button
+                                                    className="text-pure-primary hover:text-pure-secondary mr-4"
+                                                    onClick={() => handleEditZone(zone)}
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    className="text-red-400 hover:text-red-300"
+                                                    onClick={() => zone.id && handleDeleteZone(zone.id)}
+                                                    disabled={loading || (zone.campaigns && zone.campaigns > 0)}
+                                                >
+                                                    Delete
+                                                </button>
+                                            </td>
+                                        </motion.tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
             )}
-                </PageContainer>
-            );
+        </PageContainer>
+    );
 }

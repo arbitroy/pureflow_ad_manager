@@ -11,6 +11,7 @@ interface LoginOptions {
 interface AuthContextType {
     user: User | null;
     loading: boolean;
+    initialized: boolean; // New flag to track initialization
     lastLogin: Date | null;
     login: (email: string, password: string, options?: LoginOptions) => Promise<void>;
     logout: () => Promise<void>;
@@ -23,6 +24,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
     user: null,
     loading: true,
+    initialized: false,
     lastLogin: null,
     login: async () => { },
     logout: async () => { },
@@ -41,6 +43,7 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [initialized, setInitialized] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [lastLogin, setLastLogin] = useState<Date | null>(null);
     const router = useRouter();
@@ -51,6 +54,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     useEffect(() => {
         const checkAuth = async () => {
             try {
+                setLoading(true);
                 const authResult = await fetchCurrentUser();
                 if (authResult) {
                     setUser(authResult.user);
@@ -63,6 +67,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                 // Silent failure for initial check
             } finally {
                 setLoading(false);
+                setInitialized(true); // Mark initialization as complete
             }
         };
 
@@ -77,6 +82,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
         return () => clearInterval(refreshInterval);
     }, []);
+
 
     // Fetch current user helper
     const fetchCurrentUser = async () => {
@@ -189,6 +195,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return (
         <AuthContext.Provider
             value={{
+                initialized,
                 user,
                 loading,
                 lastLogin,

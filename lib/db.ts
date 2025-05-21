@@ -7,7 +7,7 @@ export async function getPool(): Promise<mysql.Pool> {
 
         pool = mysql.createPool({
             host: process.env.DB_HOST || 'localhost',
-            user: process.env.DB_USER || 'root',
+            user: process.env.DB_USER || 'pureflow',
             password: process.env.DB_PASSWORD || '12345',
             database: process.env.DB_NAME || 'pureflow_db',
             waitForConnections: true,
@@ -34,5 +34,10 @@ export default {
             await pool.end();
             pool = null;
         }
+    },
+    // Add getConnection method
+    getConnection: async () => {
+        const poolInstance = await getPool();
+        return poolInstance.getConnection();
     }
 };

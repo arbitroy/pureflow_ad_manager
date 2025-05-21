@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ReactNode, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,13 +10,22 @@ interface AuthLayoutProps {
 }
 
 export default function AuthLayout({ children }: AuthLayoutProps) {
-    const { isAuthenticated, loading } = useAuth();
+    const { isAuthenticated, loading, initialized } = useAuth();
     const pathname = usePathname();
+    const router = useRouter();
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    // Handle redirection when auth state is known
+    useEffect(() => {
+        // Only attempt to redirect after the component is mounted and auth is initialized
+        if (mounted && initialized && !loading && !isAuthenticated && pathname !== '/login') {
+            router.push('/login');
+        }
+    }, [mounted, initialized, loading, isAuthenticated, pathname, router]);
 
     // Don't render anything on the server to avoid hydration mismatch
     if (!mounted) {

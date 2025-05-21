@@ -11,6 +11,7 @@ const Navbar = () => {
     const { user, logout, isAuthenticated } = useAuth();
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const [mounted, setMounted] = useState(false);
 
     const navItems = [
         { name: 'Dashboard', path: '/' },
@@ -32,6 +33,11 @@ const Navbar = () => {
         setDropdownOpen(!dropdownOpen);
     };
 
+    // Add mounted state to protect against hydration issues
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -50,6 +56,38 @@ const Navbar = () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [dropdownOpen]);
+    
+    // Simple version for server-side rendering to prevent hydration mismatch
+    if (!mounted) {
+        return (
+            <nav className="bg-pure-light-dark py-4">
+                <div className="pure-container">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                            <div className="h-10 w-10 rounded-full bg-pure-primary flex items-center justify-center">
+                                <span className="text-white font-bold">PF</span>
+                            </div>
+                            <span className="text-white font-bold text-xl">PURE FLOW</span>
+                        </div>
+
+                        <div className="hidden md:flex space-x-8">
+                            {navItems.map((item) => (
+                                <Link
+                                    key={item.path}
+                                    href={item.path}
+                                    className="relative"
+                                >
+                                    <span className="text-white hover:text-pure-secondary transition-colors">
+                                        {item.name}
+                                    </span>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        );
+    }
 
     return (
         <nav className="bg-pure-light-dark py-4">

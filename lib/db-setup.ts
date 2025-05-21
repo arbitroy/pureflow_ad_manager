@@ -5,7 +5,7 @@ import { UserRole, PlatformName, CampaignStatus } from '../types/models';
 
 // Database connection parameters
 const DB_HOST = process.env.DB_HOST || 'localhost';
-const DB_USER = process.env.DB_USER || 'root';
+const DB_USER = process.env.DB_USER || 'pureflow';
 const DB_PASSWORD = process.env.DB_PASSWORD || '12345';
 const DB_NAME = process.env.DB_NAME || 'pureflow_db';
 
