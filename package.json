@@ -11,7 +11,8 @@
     "setup": "npm run init-db",
     "setup-maps": "node scripts/setup-maps.js",
     "dev:with-db": "npm run init-db && npm run dev",
-    "fix-cache": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/fix-cache-table.ts"
+    "fix-cache": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/fix-cache-table.ts",
+    "add-platform-info": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/add-platform-user-info.ts"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.6",
